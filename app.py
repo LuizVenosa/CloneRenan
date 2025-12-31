@@ -92,30 +92,26 @@ elif st.session_state.page == "analise":
     tab_stats, tab_grafo = st.tabs(["📊 Estatísticas e Correlações", "🕸️ Grafo de Conexões Inteligente"])
 
     with tab_stats:
-        st.subheader("Ranking de Relevância")
+# 1. Tabela Top 5 no Início
+        st.subheader("🎯 Resumo dos Temas em Destaque")
         temas_top = dados['stats'].get('temas_descobertos', [])[:5]
-        df_top_temas = pd.DataFrame({"Posição": range(1, len(temas_top)+1), "Tema em Destaque": temas_top})
-        st.table(df_top_temas) # Tabela limpa e bela
-        st.divider()
-
-        df = pd.DataFrame(dados['stats']['ranking'], columns=['Entidade/Tema', 'Menções'])
-        df = df.sort_values(by='Menções', ascending=False)
-        st.bar_chart(df.set_index('Entidade/Tema').head(15))
+        df_top = pd.DataFrame({"Tema": temas_top})
+        st.table(df_top)
         
-        st.divider()
-        
-        st.subheader("🔗 Correlações de Temas Naturais")
-        # Mostra quais temas aparecem mais vezes juntos (edges com maior peso)
-        g_data = dados.get('grafo', {})
-        edges_raw = g_data.get('edges', [])
-        
-        correlacoes = sorted(edges_raw, key=lambda x: x.get('weight', 0), reverse=True)
-        
-        cols = st.columns(3)
-        for i, corr in enumerate(correlacoes[:9]): # Top 9 correlações
-            with cols[i % 3]:
-                st.info(f"**{corr['source']}** ↔️ **{corr['target']}**\n\nFrequência: {corr['weight']}")
-
+        st.subheader("Ranking de Frequência (Decrescente)")
+        ranking_raw = dados['stats'].get('ranking', [])
+        if ranking_raw:
+            df = pd.DataFrame(ranking_raw, columns=['Entidade', 'Mencoes'])
+            
+            # ORDENAÇÃO DECRESCENTE EXPLÍCITA
+            df = df.sort_values(by='Mencoes', ascending=False)
+            
+            # Gráfico de Barras com Plo tly para melhor controle de ordem
+            import plotly.express as px
+            fig = px.bar(df.head(20), x='Entidade', y='Mencoes', 
+                            color='Mencoes', color_continuous_scale='Viridis')
+            fig.update_layout(xaxis={'categoryorder':'total descending'})
+            st.plotly_chart(fig, use_container_width=True)
     with tab_grafo:
         st.subheader("Mapa Mental de Influência")
         st.caption("Nós maiores indicam temas/pessoas discutidos com mais frequência (mínimo 5 menções).")
