@@ -1,1 +1,11 @@
-ÿþ
+streamlit
+langchain
+langchain-core
+langgraph
+langchain-google-genai
+langchain-community
+chromadb
+pysrt
+python-dotenv
+sentence-transformers
+pysqlite3-binary
