@@ -93,7 +93,13 @@ elif st.session_state.page == "analise":
 
     with tab_stats:
         st.subheader("Ranking de Relevância")
+        temas_top = dados['stats'].get('temas_descobertos', [])[:5]
+        df_top_temas = pd.DataFrame({"Posição": range(1, len(temas_top)+1), "Tema em Destaque": temas_top})
+        st.table(df_top_temas) # Tabela limpa e bela
+        st.divider()
+
         df = pd.DataFrame(dados['stats']['ranking'], columns=['Entidade/Tema', 'Menções'])
+        df = df.sort_values(by='Menções', ascending=False)
         st.bar_chart(df.set_index('Entidade/Tema').head(15))
         
         st.divider()
@@ -124,7 +130,7 @@ elif st.session_state.page == "analise":
                 id=n['id'], 
                 label=n['id'], 
                 # Tamanho proporcional às menções (mencoes calculadas no backend)
-                size=10 + (n.get('mencoes', 5) * 1.5), 
+                size=10 + (n.get('mencoes', 5)), 
                 color="#FF4B4B" if n['id'].isupper() else "#4ECDC4",
                 font={'size': 12, 'color': 'white'}
             ) for n in nodes_raw

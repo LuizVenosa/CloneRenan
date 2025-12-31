@@ -25,7 +25,7 @@ def extrair_temas_naturais(textos, top_n=15):
     feature_names = vectorizer.get_feature_names_out()
     sums = tfidf_matrix.sum(axis=0)
     data = [(term, sums[0, col]) for col, term in enumerate(feature_names)]
-    return [termo.upper() for termo, score in sorted(data, key=lambda x: x[1], reverse=True)[:top_n]]
+    return [termo for termo, score in sorted(data, key=lambda x: x[1], reverse=True)[:top_n]]
 
 def processar_transcricoes(pasta_srt):
     all_texts = []
