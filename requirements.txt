@@ -1,4 +1,5 @@
 streamlit
+streamlit_agraph
 langchain
 langchain-core
 langgraph
@@ -10,3 +11,7 @@ pysrt
 python-dotenv
 sentence-transformers
 pysqlite3-binary
+spacy
+pandas
+networkx
+pt_core_news_lg @ https://github.com/explosion/spacy-models/releases/download/pt_core_news_lg-3.7.0/pt_core_news_lg-3.7.0-py3-none-any.whl
