@@ -1,6 +1,6 @@
 import streamlit as st
 from langchain_core.messages import HumanMessage, AIMessage
-from brain import agent  # Importando o agente do outro arquivo
+from brain import agent  
 
 st.set_page_config(page_title="Renan Santos AI", layout="centered")
 

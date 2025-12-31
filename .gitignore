@@ -2,3 +2,4 @@
 /TEXTOS RENAN
 *.zip
 .env
+/__pycache__
