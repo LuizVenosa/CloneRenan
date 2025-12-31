@@ -4,6 +4,7 @@ langchain-core
 langgraph
 langchain-google-genai
 langchain-community
+langchain-chroma
 chromadb
 pysrt
 python-dotenv
