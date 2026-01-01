@@ -2,61 +2,142 @@ import streamlit as st
 import json
 import os
 import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
+import networkx as nx
+from networkx.readwrite import json_graph
+from datetime import datetime
+from pathlib import Path
 from langchain_core.messages import HumanMessage, AIMessage
-from brain import agent  
-from streamlit_agraph import agraph, Node, Edge, Config
+from brain import agent
 
-# Configuração da página para ocupar o espaço total
-st.set_page_config(page_title="Renan Santos AI", layout="wide", initial_sidebar_state="collapsed")
+# ============================================================================
+# CONFIGURAÇÃO DA PÁGINA
+# ============================================================================
 
-# CSS personalizado para remover margens e estilizar botões
+st.set_page_config(
+    page_title="Análise de Lives - Renan Santos AI",
+    layout="wide",
+    initial_sidebar_state="expanded",
+    menu_items={
+        'Get Help': None,
+        'Report a bug': None,
+        'About': "Análise de Tópicos em Transcrições de Lives"
+    }
+)
+
+# CSS melhorado
 st.markdown("""
     <style>
     .stApp { margin-top: -50px; }
-    .nav-button {
-        display: inline-block;
-        padding: 0.5em 1.5em;
-        text-decoration: none;
+    .metric-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 20px;
         border-radius: 10px;
-        transition: 0.3s;
+        color: white;
+        text-align: center;
+    }
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 24px;
+    }
+    .stTabs [data-baseweb="tab"] {
+        padding: 10px 20px;
     }
     </style>
 """, unsafe_allow_html=True)
 
-# --- GERENCIAMENTO DE NAVEGAÇÃO ---
+# ============================================================================
+# FUNÇÕES AUXILIARES
+# ============================================================================
+
+@st.cache_data(ttl=300)  # Cache por 5 minutos
+def carregar_analise(caminho="analise_topicos.json"):
+    """
+    Carrega análise com suporte a múltiplos formatos e tratamento de erros.
+    """
+    if not os.path.exists(caminho):
+        return None, f"Arquivo não encontrado: {caminho}"
+    
+    try:
+        with open(caminho, 'r', encoding='utf-8') as f:
+            dados = json.load(f)
+        
+        # Valida estrutura mínima
+        if 'temas' not in dados or 'grafo' not in dados:
+            return None, "Estrutura de dados inválida"
+        
+        # Adiciona timestamp de carregamento
+        dados['_loaded_at'] = datetime.now().isoformat()
+        
+        return dados, None
+        
+    except json.JSONDecodeError as e:
+        return None, f"Erro ao decodificar JSON: {e}"
+    except Exception as e:
+        return None, f"Erro inesperado: {e}"
+
+def formatar_numero(num):
+    """Formata números grandes de forma legível"""
+    if num >= 1000000:
+        return f"{num/1000000:.1f}M"
+    elif num >= 1000:
+        return f"{num/1000:.1f}K"
+    return str(num)
+
+def calcular_metricas_grafo(G):
+    """Calcula métricas de análise de rede"""
+    if G.number_of_nodes() == 0:
+        return {}
+    
+    return {
+        'densidade': nx.density(G),
+        'componentes': nx.number_connected_components(G),
+        'diametro': nx.diameter(G) if nx.is_connected(G) else None,
+        'avg_clustering': nx.average_clustering(G)
+    }
+
+# ============================================================================
+# NAVEGAÇÃO
+# ============================================================================
+
 if "page" not in st.session_state:
-    st.session_state.page = "chat"
+    st.session_state.page = "analise"
 
-def change_page(name):
-    st.session_state.page = name
-
-# Cabeçalho de Navegação Intuitivo
-col_nav1, col_nav2 = st.columns([8, 2])
-with col_nav1:
-    st.title("🧠 Clone Renan Santos")
-with col_nav2:
-    if st.session_state.page == "chat":
-        if st.button("📊 Ver Análises ➔", use_container_width=True):
-            change_page("analise")
+# Sidebar com informações e controles
+with st.sidebar:
+    st.image("https://via.placeholder.com/150x150.png?text=RS", width=150)
+    st.title("🧠 Renan Santos AI")
+    st.markdown("---")
+    
+    # Navegação
+    st.subheader("Navegação")
+    if st.button("💬 Chat com Clone", use_container_width=True, type="secondary"):
+        st.session_state.page = "chat"
+        st.rerun()
+    
+    if st.button("📊 Dashboard de Análises", use_container_width=True, 
+                 type="primary" if st.session_state.page == "analise" else "secondary"):
+        st.session_state.page = "analise"
+        st.rerun()
+    
+    st.markdown("---")
+    
+    # Informações do sistema
+    if os.path.exists("analise_topicos.json"):
+        stat = os.stat("analise_topicos.json")
+        st.caption(f"📁 Última análise: {datetime.fromtimestamp(stat.st_mtime).strftime('%d/%m/%Y %H:%M')}")
+        
+        if st.button("🔄 Recarregar Dados", use_container_width=True):
+            st.cache_data.clear()
             st.rerun()
     else:
-        if st.button("⬅ Voltar ao Chat", use_container_width=True):
-            change_page("chat")
-            st.rerun()
+        st.warning("⚠️ Nenhuma análise encontrada")
+        st.info("Execute o script de análise primeiro:\n`python pipeline_analise.py`")
 
-st.divider()
-
-# --- CARREGAMENTO DE DADOS ---
-@st.cache_data
-def carregar_dados():
-    if os.path.exists("analise_completa.json"):
-        with open("analise_completa.json", 'r', encoding='utf-8') as f:
-            return json.load(f)
-    return None
-
-dados = carregar_dados()
-
-# ==================== PÁGINA 1: CHAT ====================
+# ============================================================================
+# PÁGINA: CHAT
+# ============================================================================
 if st.session_state.page == "chat":
     if "messages" not in st.session_state:
         st.session_state.messages = []
@@ -87,65 +168,380 @@ if st.session_state.page == "chat":
             
             st.session_state.messages.append(AIMessage(content=full_response))
 
-# ==================== PÁGINA 2: ANÁLISE ====================
-elif st.session_state.page == "analise":
-    tab_stats, tab_grafo = st.tabs(["📊 Estatísticas e Correlações", "🕸️ Grafo de Conexões Inteligente"])
+# ============================================================================
+# PÁGINA: ANÁLISE
+# ============================================================================
 
-    with tab_stats:
-# 1. Tabela Top 5 no Início
-        st.subheader("🎯 Resumo dos Temas em Destaque")
-        temas_top = dados['stats'].get('temas_descobertos', [])[:5]
-        df_top = pd.DataFrame({"Tema": temas_top})
-        st.table(df_top)
+elif st.session_state.page == "analise":
+    
+    # Carrega dados
+    dados, erro = carregar_analise()
+    
+    if erro:
+        st.error(f"❌ {erro}")
+        st.stop()
+    
+    # Header com métricas gerais
+    st.title("📊 Dashboard de Análise de Tópicos")
+    
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        total_docs = dados['metadados']['documentos_processados']
+        st.metric("📁 Lives Analisadas", total_docs)
+    
+    with col2:
+        total_temas = len(dados['temas']['temas_finais'])
+        st.metric("🎯 Temas Identificados", total_temas)
+    
+    with col3:
+        total_mencoes = sum(freq for _, freq in dados['temas']['ranking'])
+        st.metric("💬 Total de Menções", formatar_numero(total_mencoes))
+    
+    with col4:
+        G_data = json_graph.node_link_graph(dados['grafo'])
+        st.metric("🔗 Conexões no Grafo", G_data.number_of_edges())
+    
+    st.markdown("---")
+    
+    # Tabs principais
+    tab1, tab2, tab3, tab4 = st.tabs([
+        "📈 Ranking e Frequência",
+        "🕸️ Rede de Relações",
+        "🧠 Análise Semântica",
+        "📋 Detalhes dos Dados"
+    ])
+    
+    # ========================================================================
+    # TAB 1: RANKING E FREQUÊNCIA
+    # ========================================================================
+    
+    with tab1:
+        col_left, col_right = st.columns([2, 1])
         
-        st.subheader("Ranking de Frequência (Decrescente)")
-        ranking_raw = dados['stats'].get('ranking', [])
-        if ranking_raw:
-            df = pd.DataFrame(ranking_raw, columns=['Entidade', 'Mencoes'])
+        with col_left:
+            st.subheader("🏆 Top Temas por Frequência")
             
-            # ORDENAÇÃO DECRESCENTE EXPLÍCITA
-            df = df.sort_values(by='Mencoes', ascending=False)
+            # Controle de quantidade
+            top_n = st.slider("Quantos temas exibir?", 5, 50, 20, 5)
             
-            # Gráfico de Barras com Plo tly para melhor controle de ordem
-            import plotly.express as px
-            fig = px.bar(df.head(20), x='Entidade', y='Mencoes', 
-                            color='Mencoes', color_continuous_scale='Viridis')
-            fig.update_layout(xaxis={'categoryorder':'total descending'})
-            st.plotly_chart(fig, use_container_width=True)
-    with tab_grafo:
-        st.subheader("Mapa Mental de Influência")
-        st.caption("Nós maiores indicam temas/pessoas discutidos com mais frequência (mínimo 5 menções).")
-        
-        g_data = dados.get('grafo', {})
-        nodes_raw = g_data.get('nodes', [])
-        edges_raw = g_data.get('edges', [])
-        
-        # Estilização dinâmica
-        nodes = [
-            Node(
-                id=n['id'], 
-                label=n['id'], 
-                # Tamanho proporcional às menções (mencoes calculadas no backend)
-                size=10 + (n.get('mencoes', 5)), 
-                color="#FF4B4B" if n['id'].isupper() else "#4ECDC4",
-                font={'size': 12, 'color': 'white'}
-            ) for n in nodes_raw
-        ]
-        
-        edges = [Edge(source=e['source'], target=e['target'], width=e.get('weight', 1)) for e in edges_raw]
-        
-        if nodes:
-            # CONFIGURAÇÃO DE FÍSICA PARA PARAR DE MOVER
-            config = Config(
-                width=1000, 
-                height=800, 
-                directed=False,
-                nodeHighlightBehavior=True, 
-                collapsible=False,
-                physics={
-                    "enabled": True,
-                    "stabilization": {"iterations": 200, "updateInterval": 10},
-                    "barnesHut": {"gravitationalConstant": -15000, "centralGravity": 0.1, "springLength": 100}
-                }
+            ranking_data = dados['temas']['ranking'][:top_n]
+            df_ranking = pd.DataFrame(ranking_data, columns=['Tema', 'Menções'])
+            
+            # Gráfico de barras horizontal
+            fig = px.bar(
+                df_ranking,
+                x='Menções',
+                y='Tema',
+                orientation='h',
+                color='Menções',
+                color_continuous_scale='Viridis',
+                title=f"Top {top_n} Temas Mais Mencionados"
             )
-            agraph(nodes=nodes, edges=edges, config=config)
+            
+            fig.update_layout(
+                height=max(400, top_n * 25),
+                yaxis={'categoryorder': 'total ascending'},
+                showlegend=False
+            )
+            
+            st.plotly_chart(fig, use_container_width=True)
+        
+        with col_right:
+            st.subheader("🎯 Temas em Destaque")
+            
+            temas_destaque = dados['temas']['temas_finais'][:10]
+            
+            for i, tema in enumerate(temas_destaque, 1):
+                # Encontra frequência
+                freq = next((f for t, f in ranking_data if t == tema), 0)
+                st.markdown(f"**{i}.** {tema}")
+                st.progress(freq / ranking_data[0][1] if ranking_data else 0)
+                st.caption(f"{freq} menções")
+            
+            # Download do ranking completo
+            st.markdown("---")
+            csv = pd.DataFrame(
+                dados['temas']['ranking'],
+                columns=['Tema', 'Menções']
+            ).to_csv(index=False)
+            
+            st.download_button(
+                "📥 Baixar Ranking Completo (CSV)",
+                csv,
+                "ranking_temas.csv",
+                "text/csv",
+                use_container_width=True
+            )
+        
+        # Distribuição de frequências
+        st.markdown("---")
+        st.subheader("📊 Distribuição de Frequências")
+        
+        col_dist1, col_dist2 = st.columns(2)
+        
+        with col_dist1:
+            # Histograma
+            frequencias = [freq for _, freq in dados['temas']['ranking']]
+            
+            fig_hist = px.histogram(
+                x=frequencias,
+                nbins=30,
+                title="Distribuição de Menções",
+                labels={'x': 'Número de Menções', 'y': 'Quantidade de Temas'}
+            )
+            st.plotly_chart(fig_hist, use_container_width=True)
+        
+        with col_dist2:
+            # Box plot
+            fig_box = px.box(
+                y=frequencias,
+                title="Análise Estatística",
+                labels={'y': 'Menções'}
+            )
+            fig_box.update_layout(showlegend=False)
+            st.plotly_chart(fig_box, use_container_width=True)
+    
+    # ========================================================================
+    # TAB 2: REDE DE RELAÇÕES
+    # ========================================================================
+    
+    with tab2:
+        st.subheader("🕸️ Grafo de Co-ocorrências")
+        
+        # Controles
+        col_ctrl1, col_ctrl2, col_ctrl3 = st.columns(3)
+        
+        with col_ctrl1:
+            min_freq = st.slider(
+                "Frequência mínima do nó",
+                1, 20, 5,
+                help="Exibe apenas tópicos com pelo menos N menções"
+            )
+        
+        with col_ctrl2:
+            min_weight = st.slider(
+                "Peso mínimo da aresta",
+                1, 10, 3,
+                help="Exibe apenas conexões que ocorreram pelo menos N vezes"
+            )
+        
+        with col_ctrl3:
+            layout_type = st.selectbox(
+                "Layout do grafo",
+                ["spring", "kamada_kawai", "circular"],
+                help="Algoritmo de posicionamento dos nós"
+            )
+        
+        # Reconstrói grafo com filtros
+        G = json_graph.node_link_graph(dados['grafo'])
+        
+        # Filtra nós por frequência
+        nos_validos = [
+            n for n, data in G.nodes(data=True)
+            if data.get('frequencia', 0) >= min_freq
+        ]
+        G_filtrado = G.subgraph(nos_validos).copy()
+        
+        # Filtra arestas por peso
+        arestas_remover = [
+            (u, v) for u, v, data in G_filtrado.edges(data=True)
+            if data.get('weight', 0) < min_weight
+        ]
+        G_filtrado.remove_edges_from(arestas_remover)
+        
+        # Remove nós isolados
+        G_filtrado.remove_nodes_from(list(nx.isolates(G_filtrado)))
+        
+        if G_filtrado.number_of_nodes() == 0:
+            st.warning("⚠️ Nenhum nó restante com os filtros atuais. Reduza os valores.")
+        else:
+            # Métricas do grafo
+            col_m1, col_m2, col_m3, col_m4 = st.columns(4)
+            
+            metricas = calcular_metricas_grafo(G_filtrado)
+            
+            with col_m1:
+                st.metric("Nós", G_filtrado.number_of_nodes())
+            with col_m2:
+                st.metric("Arestas", G_filtrado.number_of_edges())
+            with col_m3:
+                st.metric("Densidade", f"{metricas.get('densidade', 0):.3f}")
+            with col_m4:
+                st.metric("Componentes", metricas.get('componentes', 0))
+            
+            # Calcula layout
+            if layout_type == "spring":
+                pos = nx.spring_layout(G_filtrado, k=2, iterations=50)
+            elif layout_type == "kamada_kawai":
+                pos = nx.kamada_kawai_layout(G_filtrado)
+            else:
+                pos = nx.circular_layout(G_filtrado)
+            
+            # Calcula centralidades
+            centralidade = nx.degree_centrality(G_filtrado)
+            
+            # Cria visualização com Plotly
+            edge_trace = []
+            
+            for edge in G_filtrado.edges(data=True):
+                x0, y0 = pos[edge[0]]
+                x1, y1 = pos[edge[1]]
+                weight = edge[2].get('weight', 1)
+                
+                edge_trace.append(
+                    go.Scatter(
+                        x=[x0, x1, None],
+                        y=[y0, y1, None],
+                        mode='lines',
+                        line=dict(width=weight * 0.5, color='#888'),
+                        hoverinfo='none',
+                        showlegend=False
+                    )
+                )
+            
+            # Nós
+            node_x = []
+            node_y = []
+            node_text = []
+            node_size = []
+            node_color = []
+            
+            for node in G_filtrado.nodes():
+                x, y = pos[node]
+                node_x.append(x)
+                node_y.append(y)
+                
+                freq = G_filtrado.nodes[node].get('frequencia', 1)
+                cent = centralidade[node]
+                
+                node_text.append(f"{node}<br>Menções: {freq}<br>Centralidade: {cent:.3f}")
+                node_size.append(10 + freq * 2)  # Escala controlada
+                node_color.append(cent)
+            
+            node_trace = go.Scatter(
+                x=node_x,
+                y=node_y,
+                mode='markers+text',
+                text=[n for n in G_filtrado.nodes()],
+                textposition="top center",
+                textfont=dict(size=10),
+                hovertext=node_text,
+                hoverinfo='text',
+                marker=dict(
+                    size=node_size,
+                    color=node_color,
+                    colorscale='Viridis',
+                    showscale=True,
+                    colorbar=dict(title="Centralidade"),
+                    line=dict(width=2, color='white')
+                )
+            )
+            
+            fig_graph = go.Figure(data=edge_trace + [node_trace])
+            
+            fig_graph.update_layout(
+                title="Rede de Co-ocorrências entre Tópicos",
+                showlegend=False,
+                hovermode='closest',
+                height=700,
+                xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+                yaxis=dict(showgrid=False, zeroline=False, showticklabels=False)
+            )
+            
+            st.plotly_chart(fig_graph, use_container_width=True)
+            
+            # Top nós por centralidade
+            st.markdown("---")
+            st.subheader("🎯 Tópicos Mais Centrais na Rede")
+            
+            top_centrais = sorted(
+                centralidade.items(),
+                key=lambda x: x[1],
+                reverse=True
+            )[:10]
+            
+            df_centrais = pd.DataFrame(
+                top_centrais,
+                columns=['Tópico', 'Centralidade']
+            )
+            df_centrais['Centralidade'] = df_centrais['Centralidade'].round(3)
+            
+            st.dataframe(df_centrais, use_container_width=True, hide_index=True)
+    
+    # ========================================================================
+    # TAB 3: ANÁLISE SEMÂNTICA
+    # ========================================================================
+    
+    with tab3:
+        st.subheader("🧠 Mapa de Similaridade Semântica")
+        st.info("Este heatmap mostra o quão semanticamente próximos os temas estão, baseado em embeddings BERT.")
+        
+        # Nota: Seu código original não salva a matriz BERT
+        # Vou adicionar um exemplo de como deveria ser
+        
+        st.warning("⚠️ Funcionalidade em desenvolvimento - requer execução do pipeline melhorado")
+        
+        # Exemplo de implementação (comentado)
+        st.code("""
+        # No pipeline melhorado, adicione:
+        def salvar_matriz_similaridade(temas_finais):
+            model = SentenceTransformer('paraphrase-multilingual-MiniLM-L12-v2')
+            embeddings = model.encode(temas_finais)
+            similaridades = util.cos_sim(embeddings, embeddings).cpu().numpy()
+            return similaridades.tolist()
+        
+        # E salve no JSON final:
+        resultado['analise_semantica'] = {
+            'matriz_similaridade': salvar_matriz_similaridade(temas_finais),
+            'temas_ordem': temas_finais
+        }
+        """, language='python')
+    
+    # ========================================================================
+    # TAB 4: DETALHES DOS DADOS
+    # ========================================================================
+    
+    with tab4:
+        st.subheader("📋 Metadados da Análise")
+        
+        metadata = dados['metadados']
+        
+        col_det1, col_det2 = st.columns(2)
+        
+        with col_det1:
+            st.metric("Total de Documentos Encontrados", metadata['total_documentos'])
+            st.metric("Documentos Processados com Sucesso", metadata['documentos_processados'])
+        
+        with col_det2:
+            taxa_sucesso = (metadata['documentos_processados'] / metadata['total_documentos']) * 100
+            st.metric("Taxa de Sucesso", f"{taxa_sucesso:.1f}%")
+        
+        st.markdown("---")
+        st.subheader("Detalhes por Arquivo")
+        
+        df_arquivos = pd.DataFrame(metadata['arquivos'])
+        st.dataframe(df_arquivos, use_container_width=True, hide_index=True)
+        
+        # Estatísticas agregadas
+        st.markdown("---")
+        col_stat1, col_stat2, col_stat3 = st.columns(3)
+        
+        with col_stat1:
+            total_chars = df_arquivos['tamanho'].sum()
+            st.metric("Total de Caracteres Processados", formatar_numero(total_chars))
+        
+        with col_stat2:
+            total_tokens = df_arquivos['tokens'].sum()
+            st.metric("Total de Tokens Extraídos", formatar_numero(total_tokens))
+        
+        with col_stat3:
+            avg_tokens = df_arquivos['tokens'].mean()
+            st.metric("Média de Tokens por Documento", f"{avg_tokens:.0f}")
+
+# ============================================================================
+# FOOTER
+# ============================================================================
+
+st.markdown("---")
+st.caption("🧠 Renan Santos AI - Análise de Tópicos | Desenvolvido com Streamlit")
