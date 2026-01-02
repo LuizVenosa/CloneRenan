@@ -238,7 +238,13 @@ def construir_grafo_tematico(co_occurrences: List[Tuple[str, str]],
             G.nodes[no]['centralidade'] = cent
     
     return G
-
+        
+        # No pipeline melhorado, adicione:
+def salvar_matriz_similaridade(temas_finais):
+    model = SentenceTransformer('paraphrase-multilingual-MiniLM-L12-v2')
+    embeddings = model.encode(temas_finais)
+    similaridades = util.cos_sim(embeddings, embeddings).cpu().numpy()
+    return similaridades.tolist()
 # ============================================================================
 # PIPELINE PRINCIPAL
 # ============================================================================
@@ -356,7 +362,12 @@ def analisar_lives(pasta_srt: str = "./captions",
             "temas_finais": temas_finais,
             "ranking": contagem_geral.most_common(30)
         },
-        "grafo": json_graph.node_link_data(G)
+        "grafo": json_graph.node_link_data(G),
+
+        'analise_semantica' : {
+        'matriz_similaridade': salvar_matriz_similaridade(temas_finais),
+        'temas_ordem': temas_finais
+        }
     }
     
     # 9. Salva resultado

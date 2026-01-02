@@ -148,7 +148,7 @@ if st.session_state.page == "chat":
         with st.chat_message(role):
             st.markdown(message.content)
 
-    if prompt := st.chat_input("Pergunte ao Renan sobre estética, política ou decadência..."):
+    if prompt := st.chat_input("Pergunte ao Renan:"):
         st.session_state.messages.append(HumanMessage(content=prompt))
         with st.chat_message("user"):
             st.markdown(prompt)
@@ -273,33 +273,6 @@ elif st.session_state.page == "analise":
                 use_container_width=True
             )
         
-        # Distribuição de frequências
-        st.markdown("---")
-        st.subheader("📊 Distribuição de Frequências")
-        
-        col_dist1, col_dist2 = st.columns(2)
-        
-        with col_dist1:
-            # Histograma
-            frequencias = [freq for _, freq in dados['temas']['ranking']]
-            
-            fig_hist = px.histogram(
-                x=frequencias,
-                nbins=30,
-                title="Distribuição de Menções",
-                labels={'x': 'Número de Menções', 'y': 'Quantidade de Temas'}
-            )
-            st.plotly_chart(fig_hist, use_container_width=True)
-        
-        with col_dist2:
-            # Box plot
-            fig_box = px.box(
-                y=frequencias,
-                title="Análise Estatística",
-                labels={'y': 'Menções'}
-            )
-            fig_box.update_layout(showlegend=False)
-            st.plotly_chart(fig_box, use_container_width=True)
     
     # ========================================================================
     # TAB 2: REDE DE RELAÇÕES
@@ -469,27 +442,7 @@ elif st.session_state.page == "analise":
     with tab3:
         st.subheader("🧠 Mapa de Similaridade Semântica")
         st.info("Este heatmap mostra o quão semanticamente próximos os temas estão, baseado em embeddings BERT.")
-        
-        # Nota: Seu código original não salva a matriz BERT
-        # Vou adicionar um exemplo de como deveria ser
-        
-        st.warning("⚠️ Funcionalidade em desenvolvimento - requer execução do pipeline melhorado")
-        
-        # Exemplo de implementação (comentado)
-        st.code("""
-        # No pipeline melhorado, adicione:
-        def salvar_matriz_similaridade(temas_finais):
-            model = SentenceTransformer('paraphrase-multilingual-MiniLM-L12-v2')
-            embeddings = model.encode(temas_finais)
-            similaridades = util.cos_sim(embeddings, embeddings).cpu().numpy()
-            return similaridades.tolist()
-        
-        # E salve no JSON final:
-        resultado['analise_semantica'] = {
-            'matriz_similaridade': salvar_matriz_similaridade(temas_finais),
-            'temas_ordem': temas_finais
-        }
-        """, language='python')
+
     
    
 
