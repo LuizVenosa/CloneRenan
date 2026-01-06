@@ -1,17 +1,31 @@
-streamlit
-streamlit_agraph
-langchain
-langchain-core
-langgraph
-langchain-google-genai
-langchain-community
-langchain-chroma
-chromadb
-pysrt
-python-dotenv
-sentence-transformers
-pysqlite3-binary
-spacy
-pandas
-networkx
-pt_core_news_lg @ https://github.com/explosion/spacy-models/releases/download/pt_core_news_lg-3.7.0/pt_core_news_lg-3.7.0-py3-none-any.whl
+# Core
+streamlit>=1.28.0
+python-dotenv>=1.0.0
+
+# LangChain & AI
+langchain>=0.1.0
+langchain-core>=0.1.0
+langchain-google-genai>=0.0.6
+langchain-huggingface>=0.0.1
+langchain-chroma>=0.1.0
+langgraph>=0.0.20
+
+# NLP & Text Processing
+spacy>=3.7.0
+sentence-transformers>=2.2.2
+scikit-learn>=1.3.0
+
+# Network Analysis
+networkx>=3.0
+
+# Data Processing
+pandas>=2.0.0
+numpy>=1.24.0
+
+# Visualization
+plotly>=5.17.0
+matplotlib>=3.7.0
+wordcloud>=1.9.0
+
+# Database
+chromadb>=0.4.0

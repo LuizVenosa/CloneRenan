@@ -3,3 +3,9 @@
 *.zip
 .env
 /__pycache__
+/captions_v2
+dna_estilo_renan.txt
+download_transcripts_autogen.py
+entrevistas.txt
+/__pycache__
+__pycache__/brain.cpython-312.pyc
