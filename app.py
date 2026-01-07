@@ -24,14 +24,223 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+# BLACK & YELLOW THEME - Matching partidomissao.com
 st.markdown("""
     <style>
-    .stApp { margin-top: -50px; }
-    .metric-card {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    /* Global App Styling */
+    .stApp {
+        background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%);
+        margin-top: -50px;
+    }
+    
+    /* Sidebar Styling */
+    [data-testid="stSidebar"] {
+        background: linear-gradient(180deg, #000000 0%, #2d2d2d 100%);
+        border-right: 2px solid #FFD700;
+    }
+    
+    [data-testid="stSidebar"] h1 {
+        color: #FFD700 !important;
+        text-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+        font-weight: 800;
+    }
+    
+    /* Sidebar Buttons */
+    [data-testid="stSidebar"] .stButton button {
+        background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+        color: #000000;
+        font-weight: 700;
+        border: none;
+        border-radius: 8px;
+        padding: 12px 24px;
+        box-shadow: 0 4px 15px rgba(255, 215, 0, 0.4);
+        transition: all 0.3s ease;
+    }
+    
+    [data-testid="stSidebar"] .stButton button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(255, 215, 0, 0.6);
+    }
+    
+    /* Primary Buttons (Active) */
+    [data-testid="stSidebar"] .stButton button[kind="primary"] {
+        background: linear-gradient(135deg, #FFD700 0%, #FFED4E 100%);
+        box-shadow: 0 6px 25px rgba(255, 215, 0, 0.7);
+    }
+    
+    /* Main Title */
+    h1 {
+        color: #FFD700 !important;
+        text-shadow: 0 0 30px rgba(255, 215, 0, 0.6);
+        font-weight: 900;
+        letter-spacing: 1px;
+    }
+    
+    h2, h3 {
+        color: #FFFFFF !important;
+        border-bottom: 2px solid #FFD700;
+        padding-bottom: 10px;
+    }
+    
+    /* Text Styling */
+    p, .stMarkdown, .stText {
+        color: #FFFFFF !important;
+    }
+    
+    /* Metric Cards */
+    [data-testid="stMetricValue"] {
+        color: #FFD700 !important;
+        font-weight: 800;
+        text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+    }
+    
+    [data-testid="stMetricLabel"] {
+        color: #FFFFFF !important;
+        font-weight: 600;
+    }
+    
+    div[data-testid="metric-container"] {
+        background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
         padding: 20px;
+        border-radius: 12px;
+        border: 2px solid #FFD700;
+        box-shadow: 0 4px 20px rgba(255, 215, 0, 0.3);
+    }
+    
+    /* Chat Messages */
+    .stChatMessage {
+        background: rgba(255, 255, 255, 0.05) !important;
+        border-left: 4px solid #FFD700;
+        padding: 15px;
+        border-radius: 8px;
+        margin: 10px 0;
+    }
+    
+    /* Chat Input */
+    .stChatInput textarea {
+        background: #1a1a1a !important;
+        color: #FFFFFF !important;
+        border: 2px solid #FFD700 !important;
+        border-radius: 8px;
+    }
+    
+    .stChatInput textarea:focus {
+        border-color: #FFED4E !important;
+        box-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
+    }
+    
+    /* Tabs */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 8px;
+        background: rgba(0, 0, 0, 0.3);
+        padding: 8px;
         border-radius: 10px;
-        color: white;
+    }
+    
+    .stTabs [data-baseweb="tab"] {
+        background: transparent;
+        color: #FFFFFF;
+        border: 2px solid #444;
+        border-radius: 8px;
+        padding: 10px 20px;
+        font-weight: 600;
+    }
+    
+    .stTabs [aria-selected="true"] {
+        background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+        color: #000000;
+        border-color: #FFD700;
+        box-shadow: 0 4px 15px rgba(255, 215, 0, 0.5);
+    }
+    
+    /* Sliders */
+    .stSlider [data-baseweb="slider"] {
+        background: #2d2d2d;
+    }
+    
+    .stSlider [role="slider"] {
+        background: #FFD700 !important;
+        box-shadow: 0 0 10px rgba(255, 215, 0, 0.6);
+    }
+    
+    /* Checkbox */
+    .stCheckbox label {
+        color: #FFFFFF !important;
+    }
+    
+    /* Expander */
+    .streamlit-expanderHeader {
+        background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+        color: #FFD700 !important;
+        border: 1px solid #FFD700;
+        border-radius: 8px;
+        font-weight: 600;
+    }
+    
+    .streamlit-expanderContent {
+        background: rgba(0, 0, 0, 0.4);
+        border: 1px solid #FFD700;
+        border-top: none;
+        color: #FFFFFF;
+    }
+    
+    /* DataFrames */
+    .stDataFrame {
+        border: 2px solid #FFD700;
+        border-radius: 8px;
+        overflow: hidden;
+    }
+    
+    .stDataFrame thead tr th {
+        background: #FFD700 !important;
+        color: #000000 !important;
+        font-weight: 700;
+    }
+    
+    .stDataFrame tbody tr {
+        background: rgba(255, 255, 255, 0.05);
+        color: #FFFFFF;
+    }
+    
+    .stDataFrame tbody tr:hover {
+        background: rgba(255, 215, 0, 0.1);
+    }
+    
+    /* Info/Warning/Error boxes */
+    .stAlert {
+        background: rgba(0, 0, 0, 0.6);
+        border-left: 4px solid #FFD700;
+        color: #FFFFFF;
+    }
+    
+    /* Horizontal rule */
+    hr {
+        border-color: #FFD700 !important;
+        opacity: 0.5;
+    }
+    
+    /* Plotly charts dark mode compatibility */
+    .js-plotly-plot .plotly {
+        background: transparent !important;
+    }
+    
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+        width: 10px;
+        height: 10px;
+    }
+    
+    ::-webkit-scrollbar-track {
+        background: #1a1a1a;
+    }
+    
+    ::-webkit-scrollbar-thumb {
+        background: #FFD700;
+        border-radius: 5px;
+    }
+    
+    ::-webkit-scrollbar-thumb:hover {
+        background: #FFED4E;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -68,14 +277,15 @@ def formatar_numero(num):
     return str(num)
 
 def gerar_wordcloud(texto_dict, max_words=50):
-    """Gera word cloud a partir de dicionário {palavra: frequência}"""
+    """Gera word cloud com tema amarelo/preto"""
     wc = WordCloud(
         width=800,
         height=400,
-        background_color='white',
-        colormap='viridis',
+        background_color='#000000',
+        colormap='YlOrBr',  # Yellow-Orange-Brown colormap
         max_words=max_words,
-        relative_scaling=0.5
+        relative_scaling=0.5,
+        prefer_horizontal=0.7
     ).generate_from_frequencies(texto_dict)
     
     return wc
@@ -156,7 +366,7 @@ elif st.session_state.page == "analise":
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
-        st.metric("📁 Lives", dados['metadados']['documentos_processados'])
+        st.metric("📺 Lives", dados['metadados']['documentos_processados'])
     with col2:
         st.metric("🎯 Temas", len(dados['temas']['temas_finais']))
     with col3:
@@ -171,7 +381,6 @@ elif st.session_state.page == "analise":
     # TABS PRINCIPAIS
     tabs = ["📈 Ranking", "🕸️ Rede", "🧠 Semântica", "📄 Por Live"]
     
-    # Adiciona tab temporal se houver dados de data
     if dados['metadados'].get('tem_dados_temporais'):
         tabs.append("📅 Timeline")
     
@@ -189,19 +398,25 @@ elif st.session_state.page == "analise":
         ranking_data = dados['temas']['ranking'][:top_n]
         df_ranking = pd.DataFrame(ranking_data, columns=['Tema', 'Menções'])
         
+        # Chart with dark theme and yellow colors
         fig = px.bar(
             df_ranking,
             x='Menções',
             y='Tema',
             orientation='h',
             color='Menções',
-            color_continuous_scale='Viridis',
+            color_continuous_scale=['#FFD700', '#FFA500', '#FF8C00'],
             title=f"Top {top_n} Temas"
         )
         
         fig.update_layout(
             height=max(400, top_n * 25),
-            yaxis={'categoryorder': 'total ascending'}
+            plot_bgcolor='rgba(0,0,0,0)',
+            paper_bgcolor='rgba(0,0,0,0)',
+            font=dict(color='#FFFFFF'),
+            title_font=dict(color='#FFD700', size=20),
+            xaxis=dict(gridcolor='rgba(255,255,255,0.1)'),
+            yaxis=dict(gridcolor='rgba(255,255,255,0.1)')
         )
         
         st.plotly_chart(fig, use_container_width=True)
@@ -213,13 +428,14 @@ elif st.session_state.page == "analise":
         freq_dict = {tema: freq for tema, freq in ranking_data}
         wc = gerar_wordcloud(freq_dict)
         
-        fig_wc, ax = plt.subplots(figsize=(10, 5))
+        fig_wc, ax = plt.subplots(figsize=(10, 5), facecolor='#000000')
         ax.imshow(wc, interpolation='bilinear')
         ax.axis('off')
+        ax.set_facecolor('#000000')
         st.pyplot(fig_wc)
 
     # ========================================================================
-    # TAB 2: REDE (MELHORADA)
+    # TAB 2: REDE
     # ========================================================================
     
     with tab_refs[1]:
@@ -234,10 +450,8 @@ elif st.session_state.page == "analise":
         with col_ctrl3:
             mostrar_comunidades = st.checkbox("Colorir por comunidade", value=True)
         
-        # Reconstrói grafo
         G = json_graph.node_link_graph(dados['grafo'])
         
-        # Filtros
         nos_validos = [
             n for n, data in G.nodes(data=True)
             if data.get('frequencia', 0) >= min_freq
@@ -254,7 +468,6 @@ elif st.session_state.page == "analise":
         if G_filtrado.number_of_nodes() == 0:
             st.warning("⚠️ Ajuste os filtros")
         else:
-            # Métricas
             col_m1, col_m2, col_m3, col_m4 = st.columns(4)
             
             densidade = nx.density(G_filtrado)
@@ -269,23 +482,20 @@ elif st.session_state.page == "analise":
             with col_m4:
                 st.metric("Componentes", componentes)
             
-            # Layout
             pos = nx.spring_layout(G_filtrado, k=1, iterations=50)
             centralidade = nx.degree_centrality(G_filtrado)
             
-            # Cores por comunidade
             if mostrar_comunidades and 'comunidades' in dados:
                 comunidades_map = dados['comunidades'].get('mapeamento', {})
                 cores = {}
-                palette = px.colors.qualitative.Plotly
+                palette = ['#FFD700', '#FFA500', '#FF8C00', '#FFED4E', '#FFB347']
                 
                 for no in G_filtrado.nodes():
                     com_id = comunidades_map.get(no, 0)
                     cores[no] = palette[com_id % len(palette)]
             else:
-                cores = {no: '#636EFA' for no in G_filtrado.nodes()}
+                cores = {no: '#FFD700' for no in G_filtrado.nodes()}
             
-            # Visualização
             edge_trace = []
             for edge in G_filtrado.edges(data=True):
                 x0, y0 = pos[edge[0]]
@@ -296,7 +506,7 @@ elif st.session_state.page == "analise":
                         x=[x0, x1, None],
                         y=[y0, y1, None],
                         mode='lines',
-                        line=dict(width=0.5, color='#888'),
+                        line=dict(width=0.5, color='rgba(255,215,0,0.3)'),
                         hoverinfo='none',
                         showlegend=False
                     )
@@ -313,7 +523,7 @@ elif st.session_state.page == "analise":
                 cent = centralidade[node]
                 
                 node_text.append(f"{node}<br>Menções: {freq}<br>Centralidade: {cent:.3f}")
-                node_size.append(10+ np.log(freq))
+                node_size.append(10 + np.log(freq) * 3)
                 node_color.append(cores[node])
             
             node_trace = go.Scatter(
@@ -322,13 +532,13 @@ elif st.session_state.page == "analise":
                 mode='markers+text',
                 text=[n for n in G_filtrado.nodes()],
                 textposition="top center",
-                textfont=dict(size=9),
+                textfont=dict(size=9, color='#FFFFFF'),
                 hovertext=node_text,
                 hoverinfo='text',
                 marker=dict(
                     size=node_size,
                     color=node_color,
-                    line=dict(width=2, color='white')
+                    line=dict(width=2, color='#000000')
                 ),
                 showlegend=False
             )
@@ -339,13 +549,16 @@ elif st.session_state.page == "analise":
                 title="Rede de Tópicos",
                 showlegend=False,
                 height=700,
+                plot_bgcolor='rgba(0,0,0,0)',
+                paper_bgcolor='rgba(0,0,0,0)',
+                font=dict(color='#FFFFFF'),
+                title_font=dict(color='#FFD700', size=20),
                 xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
                 yaxis=dict(showgrid=False, zeroline=False, showticklabels=False)
             )
             
             st.plotly_chart(fig_graph, use_container_width=True)
             
-            # Análise de comunidades
             if 'comunidades' in dados and dados['comunidades']['total'] > 0:
                 st.markdown("---")
                 st.subheader("🎯 Comunidades Identificadas")
@@ -364,7 +577,7 @@ elif st.session_state.page == "analise":
                         st.write(", ".join(sorted(membros)))
     
     # ========================================================================
-    # TAB 3: ANÁLISE SEMÂNTICA (COMPLETA AGORA!)
+    # TAB 3: ANÁLISE SEMÂNTICA
     # ========================================================================
     
     with tab_refs[2]:
@@ -374,40 +587,41 @@ elif st.session_state.page == "analise":
             matriz = np.array(dados['analise_semantica']['matriz_similaridade'])
             temas_ordem = dados['analise_semantica']['temas_ordem']
             
-            # Limita a 20 temas para visualização
             if len(temas_ordem) > 20:
                 st.info(f"📊 Mostrando top 20 de {len(temas_ordem)} temas")
                 temas_ordem = temas_ordem[:20]
                 matriz = matriz[:20, :20]
             
-            # Heatmap
             fig_heat = go.Figure(data=go.Heatmap(
                 z=matriz,
                 x=temas_ordem,
                 y=temas_ordem,
-                colorscale='RdYlGn',
+                colorscale=['#000000', '#FFD700', '#FFED4E'],
                 text=np.round(matriz, 2),
                 texttemplate='%{text}',
-                textfont={"size": 8},
-                colorbar=dict(title="Similaridade")
+                textfont={"size": 8, "color": "#000000"},
+                colorbar=dict(title="Similaridade", titlefont=dict(color='#FFFFFF'), tickfont=dict(color='#FFFFFF'))
             ))
             
             fig_heat.update_layout(
                 title="Mapa de Calor - Similaridade entre Temas",
                 height=700,
-                xaxis_tickangle=-45
+                xaxis_tickangle=-45,
+                plot_bgcolor='rgba(0,0,0,0)',
+                paper_bgcolor='rgba(0,0,0,0)',
+                font=dict(color='#FFFFFF'),
+                title_font=dict(color='#FFD700', size=20)
             )
             
             st.plotly_chart(fig_heat, use_container_width=True)
             
-            # Encontra pares mais similares
             st.markdown("---")
             st.subheader("🔗 Temas Mais Relacionados Semanticamente")
             
             pares_similares = []
             for i in range(len(temas_ordem)):
                 for j in range(i+1, len(temas_ordem)):
-                    if matriz[i][j] > 0.5:  # Threshold de similaridade
+                    if matriz[i][j] > 0.5:
                         pares_similares.append({
                             'Tema 1': temas_ordem[i],
                             'Tema 2': temas_ordem[j],
@@ -421,4 +635,3 @@ elif st.session_state.page == "analise":
                 st.info("Nenhum par com similaridade > 0.5")
         else:
             st.warning("⚠️ Dados de similaridade não disponíveis")
-   
