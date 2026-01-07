@@ -1,3 +1,4 @@
 *.sqlite3 filter=lfs diff=lfs merge=lfs -text
 db_clone/chroma.sqlite3 filter=lfs diff=lfs merge=lfs -text
 db_clone/**/*.bin filter=lfs diff=lfs merge=lfs -text
+db_clone_v2/chroma.sqlite3 filter=lfs diff=lfs merge=lfs -text
