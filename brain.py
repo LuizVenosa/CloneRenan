@@ -15,7 +15,7 @@ embeddings = HuggingFaceEmbeddings(
     model_name="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
     encode_kwargs={"normalize_embeddings": True}
 )
-DB_PATH = "./db_clone_v2"
+DB_PATH = "./db_clone"
 
 # Carregar Master Prompt
 if os.path.exists("prompt_clone.txt"):
