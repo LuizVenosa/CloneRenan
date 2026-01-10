@@ -39,16 +39,12 @@ def carregar_nlp():
         nlp.add_pipe('sentencizer')
         return nlp
 
-# ============================================================================
-# PROCESSAMENTO DE TEXTO
-# ============================================================================
-
 def extrair_data_do_nome(nome_arquivo: str) -> str:
     """
     NOVO: Extrai data do nome do arquivo (formato: YYYYMMDD ou YYYY-MM-DD)
     Exemplo: "live_20240315.srt" -> "2024-03-15"
     """
-    # Padrões comuns de data
+    
     padroes = [
         r'(\d{4})[-_]?(\d{2})[-_]?(\d{2})',  # YYYYMMDD ou YYYY-MM-DD
         r'(\d{2})[-_]?(\d{2})[-_]?(\d{4})',  # DDMMYYYY ou DD-MM-YYYY
@@ -84,7 +80,7 @@ def processar_srt(caminho: str) -> str:
     return texto.strip()
 
 def segmentar_texto(texto: str, tamanho_janela: int = 5000) -> List[str]:
-    """Divide texto em janelas sobrepostas"""
+    
     if len(texto) <= tamanho_janela:
         return [texto]
     
@@ -101,7 +97,7 @@ def segmentar_texto(texto: str, tamanho_janela: int = 5000) -> List[str]:
 def extrair_candidatos_tfidf(corpus_lematizado: List[str], 
                              min_df: int = 2, 
                              max_features: int = 150) -> Tuple[List[str], np.ndarray]:
-    """Extrai candidatos a tópicos usando TF-IDF"""
+    
     vectorizer = TfidfVectorizer(
         ngram_range=(1, 2),
         max_features=max_features,
@@ -132,8 +128,6 @@ def agrupar_temas_semanticamente(temas: List[str],
     """Agrupa temas semanticamente similares"""
     if not temas or len(temas) < 2:
         return temas
-    
-    print(f"🧠 Refinando {len(temas)} candidatos com BERT...")
     
     model = SentenceTransformer('paraphrase-multilingual-MiniLM-L12-v2')
     embeddings = model.encode(temas, convert_to_tensor=True, show_progress_bar=False)
@@ -302,7 +296,6 @@ def analisar_por_documento(textos_brutos: List[str],
                     'mencoes': matches
                 })
         
-        # Extrai frases-chave
         frases = extrair_frases_chave(texto, nlp, n_frases=5)
         
         analise_docs.append({
@@ -348,7 +341,7 @@ def analisar_lives(pasta_srt: str = "./captions",
         print("❌ Nenhum arquivo SRT encontrado.")
         return {}
     
-    print(f"📁 Encontrados {len(arquivos)} arquivos SRT\n")
+    print(f"Encontrados {len(arquivos)} arquivos SRT\n")
     
     # Processar arquivos COM EXTRAÇÃO DE DATA
     corpus_lematizado = []
@@ -402,7 +395,7 @@ def analisar_lives(pasta_srt: str = "./captions",
         print(f"❌ Documentos insuficientes")
         return {}
     
-    # Extrai tópicos
+
     print("📊 Extraindo tópicos candidatos...")
     candidatos, _ = extrair_candidatos_tfidf(corpus_lematizado, min_df=min_documentos)
     print(f"   ✅ {len(candidatos)} candidatos\n")
@@ -419,23 +412,18 @@ def analisar_lives(pasta_srt: str = "./captions",
         co_occ = extrair_entidades_e_temas(texto, nlp, temas_finais, janela_contexto=1000)
         todas_co_occurrences.extend(co_occ)
     
-    print(f"   ✅ {len(todas_co_occurrences)} co-ocorrências\n")
+    print(f"   {len(todas_co_occurrences)} co-ocorrências\n")
     
-    # Constrói grafo
-    print("🕸️ Construindo grafo...")
+
+    print("Construindo grafo...")
     G = construir_grafo_tematico(todas_co_occurrences, min_co_occurrence)
-    print(f"   ✅ {G.number_of_nodes()} nós, {G.number_of_edges()} arestas\n")
+    print(f"    {G.number_of_nodes()} nós, {G.number_of_edges()} arestas\n")
     
-    # NOVO: Detecta comunidades
-    print("🎯 Detectando comunidades no grafo...")
+
+    print("Detectando comunidades no grafo...")
     comunidades = detectar_comunidades(G)
-    print(f"   ✅ {len(set(comunidades.values()))} comunidades identificadas\n")
-    
-    # NOVO: Análise por documento
-    print("📄 Analisando documentos individuais...")
-    analise_docs = analisar_por_documento(corpus_bruto, temas_finais, nlp, metadados)
-    print(f"   ✅ Análise individual concluída\n")
-    
+    print(f"  {len(set(comunidades.values()))} comunidades identificadas\n")
+
     # Estatísticas
     contagem_geral = Counter()
     for (n1, n2) in todas_co_occurrences:

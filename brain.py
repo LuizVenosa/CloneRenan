@@ -10,7 +10,7 @@ from langgraph.prebuilt import ToolNode, tools_condition
 
 load_dotenv()
 
-# --- CONFIGURAÇÃO DE AMBIENTE ---
+
 embeddings = HuggingFaceEmbeddings(
     model_name="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
     encode_kwargs={"normalize_embeddings": True}
@@ -26,7 +26,7 @@ else:
 
 
 
-# --- FERRAMENTA DE BUSCA (RAG) COM LINKS ---
+# RAG
 vector_db = Chroma(persist_directory=DB_PATH, embedding_function=embeddings)
 retriever = vector_db.as_retriever(
     search_type="mmr",
@@ -46,7 +46,7 @@ def pesquisar_memoria_renan(query: str) -> str:
         url = doc.metadata.get('url', 'URL não disponível')
         fonte = doc.metadata.get('fonte', 'Fonte desconhecida')
         
-        # Remove extensão .srt do nome
+     
         fonte_limpa = fonte.replace('.pt.srt', '').replace('.srt', '')
         
         resultado.append(
@@ -57,14 +57,13 @@ def pesquisar_memoria_renan(query: str) -> str:
     print("\n\n".join(resultado))
     return "\n\n".join(resultado)
 
-# --- CONFIGURAÇÃO DO MODELO ---
+# Model
 llm = ChatGoogleGenerativeAI(
     model="gemini-2.5-flash",
     temperature=0.7,
     model_kwargs={"system_instruction": master_prompt}
 ).bind_tools([pesquisar_memoria_renan])
 
-# --- LÓGICA DO GRAFO ---
 def chatbot_renan(state: MessagesState):
     messages = [SystemMessage(content=master_prompt)] + state["messages"]
     response = llm.invoke(messages)
@@ -78,5 +77,5 @@ workflow.add_edge(START, "chatbot")
 workflow.add_conditional_edges("chatbot", tools_condition)
 workflow.add_edge("tools", "chatbot")
 
-# Exporta o agente compilado
+
 agent = workflow.compile()

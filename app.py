@@ -251,10 +251,6 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# ============================================================================
-# FUNÇÕES AUXILIARES
-# ============================================================================
-
 @st.cache_data(ttl=300)
 def carregar_analise(caminho="analise_topicos.json"):
     """Carrega análise com validação"""
@@ -296,9 +292,6 @@ def gerar_wordcloud(texto_dict, max_words=50):
     
     return wc
 
-# ============================================================================
-# NAVEGAÇÃO
-# ============================================================================
 
 if "page" not in st.session_state:
     st.session_state.page = "chat"
@@ -368,7 +361,6 @@ elif st.session_state.page == "analise":
         st.info("Execute: `python analyzer_backend.py`")
         st.stop()
     
-    # HEADER COM MÉTRICAS
     st.title("📊 Dashboard de Análise de Tópicos")
     
     col1, col2, col3, col4 = st.columns(4)
@@ -386,7 +378,6 @@ elif st.session_state.page == "analise":
     
     st.markdown("---")
     
-    # TABS PRINCIPAIS
     tabs = ["📈 Ranking", "🕸️ Rede"]
     
     if dados['metadados'].get('tem_dados_temporais'):
@@ -406,7 +397,6 @@ elif st.session_state.page == "analise":
         ranking_data = dados['temas']['ranking'][:top_n]
         df_ranking = pd.DataFrame(ranking_data, columns=['Tema', 'Menções'])
         
-        # Chart with dark theme and yellow colors
         fig = px.bar(
             df_ranking,
             x='Menções',
@@ -472,16 +462,14 @@ elif st.session_state.page == "analise":
             with col_ctrl4:
                 mostrar_comunidades = st.checkbox("Colorir por comunidade", value=True)
             
-            # Filter graph with loading state
+
             with st.spinner("🔄 Processando grafo..."):
                 G = json_graph.node_link_graph(dados['grafo'])
                 
-                # Get top nodes by frequency
                 node_freq = [(n, data.get('frequencia', 0)) for n, data in G.nodes(data=True)]
                 node_freq_sorted = sorted(node_freq, key=lambda x: x[1], reverse=True)
                 top_nodes = [n for n, _ in node_freq_sorted[:max_nodes]]
                 
-                # Filter by frequency first
                 nos_validos = [
                     n for n in top_nodes
                     if G.nodes[n].get('frequencia', 0) >= min_freq
@@ -493,7 +481,6 @@ elif st.session_state.page == "analise":
                 
                 G_filtrado = G.subgraph(nos_validos).copy()
                 
-                # Filter edges by weight
                 arestas_remover = [
                     (u, v) for u, v, data in G_filtrado.edges(data=True)
                     if data.get('weight', 0) < min_weight
@@ -505,7 +492,6 @@ elif st.session_state.page == "analise":
                 st.warning("⚠️ Nenhum nó conectado. Ajuste os filtros.")
                 st.stop()
             
-            # Metrics
             col_m1, col_m2, col_m3, col_m4 = st.columns(4)
             
             densidade = nx.density(G_filtrado)
@@ -520,13 +506,11 @@ elif st.session_state.page == "analise":
             with col_m4:
                 st.metric("Componentes", componentes)
             
-            # Optimize layout computation
             with st.spinner("🎨 Gerando layout..."):
-                # Use simpler layout for large graphs
                 if G_filtrado.number_of_nodes() > 30:
-                    pos = nx.spring_layout(G_filtrado, k=2, iterations=30, seed=42)
+                    pos = nx.spring_layout(G_filtrado, k=2, iterations=30, seed=32)
                 else:
-                    pos = nx.spring_layout(G_filtrado, k=1.5, iterations=50, seed=42)
+                    pos = nx.spring_layout(G_filtrado, k=1.5, iterations=50, seed=32)
                 
                 centralidade = nx.degree_centrality(G_filtrado)
             
@@ -542,9 +526,7 @@ elif st.session_state.page == "analise":
             else:
                 cores = {no: '#FFD700' for no in G_filtrado.nodes()}
             
-            # Build graph visualization
             with st.spinner("📊 Renderizando visualização..."):
-                # Create edge traces (simplified for performance)
                 edge_x, edge_y = [], []
                 
                 for edge in G_filtrado.edges():
@@ -562,7 +544,6 @@ elif st.session_state.page == "analise":
                     showlegend=False
                 )
                 
-                # Create node trace
                 node_x, node_y, node_text, node_size, node_color = [], [], [], [], []
                 
                 for node in G_filtrado.nodes():
@@ -611,7 +592,6 @@ elif st.session_state.page == "analise":
                 
                 st.plotly_chart(fig_graph, use_container_width=True)
             
-            # Communities section
             if 'comunidades' in dados and dados['comunidades']['total'] > 0:
                 st.markdown("---")
                 st.subheader("🎯 Comunidades Identificadas")
