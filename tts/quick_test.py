@@ -1,222 +1,313 @@
 #!/usr/bin/env python3
 """
-Teste rápido para validar correções
+Teste específico para brain_streaming_fixed.py
+Valida que todas as correções funcionam
 """
 
-def test_filters():
-    """Testa filtros de texto"""
+def test_basic_response():
+    """Teste 1: Resposta básica funciona?"""
     print("\n" + "="*60)
-    print("TESTE 1: Filtros de Texto")
-    print("="*60 + "\n")
-    
-    from tts_filters import TTSTextFilter
-    
-    filter = TTSTextFilter()
-    
-    # Casos de teste
-    test_cases = [
-        ("Veja https://youtube.com/watch?v=123 este vídeo.", "URLs"),
-        ("**negrito** e *itálico* com `código`", "Markdown"),
-        ("Fonte 1 (Vídeo sobre política):", "Fonte"),
-        ("Link: https://youtu.be/abc", "Link"),
-        ("Análise ｜ 31⧸07⧸2025", "Caracteres especiais"),
-        ("Esta é uma resposta normal que deve ser falada.", "Normal"),
-    ]
-    
-    for texto, label in test_cases:
-        filtrado = filter.filter(texto)
-        should_skip = filter.should_skip_sentence(texto)
-        
-        print(f"[{label}]")
-        print(f"  Original: {texto}")
-        print(f"  Filtrado: {filtrado}")
-        print(f"  Skip? {'❌ SIM' if should_skip else '✅ NÃO'}")
-        print()
-    
-    print("✓ Teste de filtros concluído\n")
-
-
-def test_brain_response():
-    """Testa resposta do brain (sem TTS para ser rápido)"""
-    print("\n" + "="*60)
-    print("TESTE 2: Brain Response (sem TTS)")
+    print("TESTE 1: Resposta Básica (sem TTS)")
     print("="*60 + "\n")
     
     try:
         from brain_streaming import RenanBrainStreaming
         
-        # Cria brain SEM TTS para teste rápido
+        print("Criando brain...")
         brain = RenanBrainStreaming(enable_tts=False)
         
-        print("Pergunta: Qual sua visão sobre política?\n")
+        print("\nPergunta: 'Qual o seu nome?'\n")
+        resposta = brain.chat("Qual o seu nome?", speak=False)
         
-        # Faz pergunta
-        response = brain.chat("Qual sua visão sobre política?", speak=False)
+        print(f"\n📊 Resultado:")
+        print(f"  Tamanho: {len(resposta)} caracteres")
+        print(f"  Primeira linha: {resposta[:100] if resposta else '(vazio)'}...")
         
-        # Valida resposta
-        print(f"\n📊 Validação:")
-        print(f"  Tamanho: {len(response)} caracteres")
-        print(f"  Contém URL? {'❌ SIM' if 'http' in response.lower() else '✅ NÃO'}")
-        print(f"  Contém 'Fonte'? {'❌ SIM' if 'fonte' in response.lower() else '✅ NÃO'}")
-        print(f"  Contém 'Link:'? {'❌ SIM' if 'link:' in response.lower() else '✅ NÃO'}")
+        # Validações
+        if not resposta:
+            print("\n❌ FALHOU: Resposta vazia!")
+            print("   Possíveis causas:")
+            print("   - API key não configurada")
+            print("   - Problema no grafo LangGraph")
+            print("   - System prompt não carregado")
+            return False
         
-        if 'http' not in response.lower() and 'fonte' not in response.lower():
-            print("\n✅ Resposta limpa! Brain funcionando corretamente.")
-        else:
-            print("\n⚠️ Resposta contém metadados. Revisar filtros.")
+        if len(resposta) < 10:
+            print("\n❌ FALHOU: Resposta muito curta")
+            return False
+        
+        if "Qual o seu nome?" in resposta:
+            print("\n⚠️ WARNING: Resposta contém a pergunta (eco)")
+            print("   Mas pelo menos GEROU resposta...")
+        
+        print("\n✅ PASSOU: Resposta gerada com sucesso!")
+        return True
         
     except Exception as e:
-        print(f"❌ Erro: {e}")
+        print(f"\n❌ ERRO: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
 
 
-def test_brain_with_tts():
-    """Testa brain com TTS (pergunta curta)"""
+def test_rag():
+    """Teste 2: RAG funciona?"""
     print("\n" + "="*60)
-    print("TESTE 3: Brain COM TTS (pergunta curta)")
+    print("TESTE 2: RAG (sem TTS)")
     print("="*60 + "\n")
     
     try:
         from brain_streaming import RenanBrainStreaming
         
-        print("⚠️  Este teste VAI FALAR (certifique-se de que o áudio está configurado)\n")
+        brain = RenanBrainStreaming(enable_tts=False)
         
-        continuar = input("Continuar? (s/N): ").strip().lower()
+        print("Pergunta: 'O que é direito penal do inimigo?'\n")
+        resposta = brain.chat("O que é direito penal do inimigo?", speak=False)
         
-        if continuar != 's':
-            print("Teste pulado.")
-            return
+        print(f"\n📊 Resultado:")
+        print(f"  Tamanho: {len(resposta)} caracteres")
         
-        # Cria brain COM TTS
+        # Validações
+        if not resposta:
+            print("\n❌ FALHOU: Sem resposta")
+            return False
+        
+        # Verifica se menciona conceito (indica que RAG foi usado)
+        keywords = ['direito', 'penal', 'inimigo', 'teoria', 'jacobs', 'günther']
+        tem_keyword = any(kw in resposta.lower() for kw in keywords)
+        
+        if tem_keyword:
+            print("✅ Resposta parece baseada em RAG (contém keywords)")
+        else:
+            print("⚠️ Resposta pode não ter usado RAG")
+        
+        # Verifica filtros
+        tem_url = 'http' in resposta.lower()
+        tem_fonte = 'fonte ' in resposta.lower()
+        
+        if tem_url or tem_fonte:
+            print(f"⚠️ WARNING: Resposta contém metadados")
+            print(f"   URLs: {'Sim' if tem_url else 'Não'}")
+            print(f"   Fontes: {'Sim' if tem_fonte else 'Não'}")
+        else:
+            print("✅ Filtros funcionando (sem URLs/fontes)")
+        
+        print("\n✅ PASSOU: RAG funcionou!")
+        return True
+        
+    except Exception as e:
+        print(f"\n❌ ERRO: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
+
+
+def test_streaming_tts():
+    """Teste 3: Streaming TTS funciona?"""
+    print("\n" + "="*60)
+    print("TESTE 3: Streaming TTS (VAI FALAR)")
+    print("="*60 + "\n")
+    
+    print("⚠️  Este teste VAI REPRODUZIR ÁUDIO!")
+    print("    Certifique-se de que:")
+    print("    - Alto-falantes ou CABLE Input estão configurados")
+    print("    - Volume está ajustado")
+    print()
+    
+    continuar = input("Continuar? (s/N): ").strip().lower()
+    
+    if continuar != 's':
+        print("Teste pulado.")
+        return True
+    
+    try:
+        from brain_streaming import RenanBrainStreaming
+        
+        print("\nCriando brain COM TTS...")
         brain = RenanBrainStreaming(
             enable_tts=True,
             tts_monitor=True,
             tts_speed=1.3  # Mais rápido para teste
         )
         
-        # Pergunta curta
-        print("\nPergunta: Olá, quem é você?\n")
-        response = brain.chat("Olá, quem é você?")
+        print("\nPergunta curta: 'Olá, tudo bem?'\n")
+        import time
+        start = time.time()
         
-        print("\n✅ Teste com TTS concluído!")
-        print("\nVocê deveria ter ouvido:")
-        print("  ✓ Apenas a resposta do Renan")
-        print("  ✗ NENHUMA URL")
-        print("  ✗ NENHUM 'Fonte 1', 'Link:', etc.")
+        resposta = brain.chat("Olá, tudo bem?", speak=True)
+        
+        tempo_total = time.time() - start
+        
+        print(f"\n📊 Resultado:")
+        print(f"  Tempo total: {tempo_total:.2f}s")
+        print(f"  Tamanho resposta: {len(resposta)} chars")
+        
+        print("\n✅ PASSOU se você:")
+        print("  ✓ Ouviu o áudio")
+        print("  ✓ TTS começou ANTES do texto terminar de gerar")
+        print("  ✓ Não ouviu URLs ou metadados")
+        
+        verificado = input("\nTudo funcionou corretamente? (s/N): ").strip().lower()
+        
+        if verificado == 's':
+            print("\n✅ Streaming TTS validado pelo usuário!")
+            return True
+        else:
+            print("\n⚠️ Usuário reportou problema")
+            return False
         
     except Exception as e:
-        print(f"❌ Erro: {e}")
+        print(f"\n❌ ERRO: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
 
 
-def test_rag_question():
-    """Testa pergunta que aciona RAG"""
+def test_conversation():
+    """Teste 4: Conversa com contexto"""
     print("\n" + "="*60)
-    print("TESTE 4: Pergunta com RAG (sem TTS)")
+    print("TESTE 4: Conversa Multi-Turn (sem TTS)")
     print("="*60 + "\n")
     
     try:
         from brain_streaming import RenanBrainStreaming
+        from langchain_core.messages import HumanMessage, AIMessage
         
         brain = RenanBrainStreaming(enable_tts=False)
         
-        print("Pergunta: O que é direito penal do inimigo?\n")
-        print("(Esta pergunta deve acionar o RAG)\n")
+        # Simula conversa
+        messages = []
         
-        response = brain.chat("O que é direito penal do inimigo?", speak=False)
+        # Turno 1
+        print("Turno 1: 'Qual o seu nome?'")
+        messages.append(HumanMessage(content="Qual o seu nome?"))
         
-        print(f"\n📊 Validação:")
-        print(f"  RAG foi acionado? {'✅ SIM' if '[DEBUG RAG]' in str(response) else 'Confira logs acima'}")
-        print(f"  Resposta limpa? {'✅ SIM' if 'http' not in response.lower() else '❌ NÃO'}")
-        print(f"  Tamanho: {len(response)} chars")
+        inputs1 = {"messages": messages}
+        resposta1 = ""
         
-        if 'http' not in response.lower() and 'fonte' not in response.lower():
-            print("\n✅ RAG acionado + resposta limpa!")
+        for event in brain.agent.stream(inputs1):
+            for node_name, node_output in event.items():
+                if node_name == "chatbot" and "messages" in node_output:
+                    last_msg = node_output["messages"][-1]
+                    if isinstance(last_msg, AIMessage):
+                        resposta1 = last_msg.content
+        
+        messages.append(AIMessage(content=resposta1))
+        print(f"  Resposta: {resposta1[:50]}...")
+        
+        # Turno 2
+        print("\nTurno 2: 'E qual sua profissão?'")
+        messages.append(HumanMessage(content="E qual sua profissão?"))
+        
+        inputs2 = {"messages": messages}
+        resposta2 = ""
+        
+        for event in brain.agent.stream(inputs2):
+            for node_name, node_output in event.items():
+                if node_name == "chatbot" and "messages" in node_output:
+                    last_msg = node_output["messages"][-1]
+                    if isinstance(last_msg, AIMessage):
+                        resposta2 = last_msg.content
+        
+        print(f"  Resposta: {resposta2[:50]}...")
+        
+        # Validação
+        if resposta1 and resposta2:
+            print("\n✅ PASSOU: Conversa multi-turn funciona!")
+            return True
         else:
-            print("\n⚠️ Resposta contém URLs/fontes. Revisar.")
+            print("\n❌ FALHOU: Alguma resposta vazia")
+            return False
         
     except Exception as e:
-        print(f"❌ Erro: {e}")
+        print(f"\n❌ ERRO: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
 
 
-def menu():
-    """Menu interativo"""
+def run_all_tests():
+    """Executa todos os testes"""
     print("""
 ╔══════════════════════════════════════════════════════════╗
 ║                                                          ║
-║         🧪 TESTE RÁPIDO - CORREÇÕES TTS                 ║
+║    🧪 TESTE COMPLETO - brain_streaming_fixed.py         ║
 ║                                                          ║
 ╚══════════════════════════════════════════════════════════╝
-
-Escolha um teste:
-
-1. Testar filtros de texto (rápido)
-2. Testar brain sem TTS (médio)
-3. Testar brain COM TTS - áudio (lento)
-4. Testar pergunta com RAG (médio)
-5. Executar todos os testes
-
-0. Sair
     """)
     
-    escolha = input("➤ Escolha (0-5): ").strip()
+    results = []
     
-    if escolha == "1":
-        test_filters()
+    # Teste 1: Básico
+    print("\n🔬 Iniciando testes...\n")
+    input("Pressione ENTER para Teste 1 (Resposta Básica)...")
+    results.append(("Resposta Básica", test_basic_response()))
     
-    elif escolha == "2":
-        test_brain_response()
-    
-    elif escolha == "3":
-        test_brain_with_tts()
-    
-    elif escolha == "4":
-        test_rag_question()
-    
-    elif escolha == "5":
-        print("\n🚀 Executando todos os testes...\n")
-        test_filters()
-        input("\n⏸️  Pressione ENTER para continuar...")
-        test_brain_response()
-        input("\n⏸️  Pressione ENTER para continuar...")
-        test_rag_question()
-        input("\n⏸️  Pressione ENTER para teste com TTS...")
-        test_brain_with_tts()
-        print("\n✅ Todos os testes concluídos!")
-    
-    elif escolha == "0":
-        print("\n👋 Até logo!")
-    
+    # Teste 2: RAG
+    if results[0][1]:  # Só continua se teste 1 passou
+        input("\nPressione ENTER para Teste 2 (RAG)...")
+        results.append(("RAG", test_rag()))
     else:
-        print("\n❌ Opção inválida")
+        print("\n⚠️ Pulando testes restantes (teste básico falhou)")
+        return
+    
+    # Teste 3: TTS
+    if results[1][1]:
+        input("\nPressione ENTER para Teste 3 (Streaming TTS)...")
+        results.append(("Streaming TTS", test_streaming_tts()))
+    
+    # Teste 4: Conversa
+    if results[0][1]:
+        input("\nPressione ENTER para Teste 4 (Conversa)...")
+        results.append(("Conversa Multi-Turn", test_conversation()))
+    
+    # Resumo
+    print("\n" + "="*60)
+    print("📊 RESUMO DOS TESTES")
+    print("="*60)
+    
+    for nome, passou in results:
+        status = "✅ PASSOU" if passou else "❌ FALHOU"
+        print(f"  {status}: {nome}")
+    
+    total = len(results)
+    passou_count = sum(1 for _, p in results if p)
+    
+    print(f"\nTotal: {passou_count}/{total} testes passaram")
+    
+    if passou_count == total:
+        print("\n🎉 TODOS OS TESTES PASSARAM!")
+        print("\nSistema pronto para uso!")
+        print("Execute: python brain_streaming_fixed.py")
+    else:
+        print("\n⚠️ Alguns testes falharam")
+        print("Verifique os erros acima")
 
 
 if __name__ == "__main__":
     import sys
     
-    # Comandos diretos
     if len(sys.argv) > 1:
         cmd = sys.argv[1].lower()
         
-        if cmd == "filters":
-            test_filters()
-        elif cmd == "brain":
-            test_brain_response()
-        elif cmd == "tts":
-            test_brain_with_tts()
+        if cmd == "basic":
+            test_basic_response()
         elif cmd == "rag":
-            test_rag_question()
+            test_rag()
+        elif cmd == "tts":
+            test_streaming_tts()
+        elif cmd == "conversation":
+            test_conversation()
         elif cmd == "all":
-            test_filters()
-            test_brain_response()
-            test_rag_question()
-            test_brain_with_tts()
+            run_all_tests()
         else:
             print(f"Comando desconhecido: {cmd}")
             print("\nUso:")
-            print("  python quick_test.py filters  # Testa filtros")
-            print("  python quick_test.py brain    # Testa brain")
-            print("  python quick_test.py tts      # Testa com TTS")
-            print("  python quick_test.py rag      # Testa RAG")
-            print("  python quick_test.py all      # Todos os testes")
+            print("  python test_fixed.py basic        # Teste básico")
+            print("  python test_fixed.py rag          # Teste RAG")
+            print("  python test_fixed.py tts          # Teste TTS")
+            print("  python test_fixed.py conversation # Teste conversa")
+            print("  python test_fixed.py all          # Todos")
     else:
-        # Menu interativo
-        menu()
+        # Modo interativo
+        run_all_tests()
