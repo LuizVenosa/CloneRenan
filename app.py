@@ -115,8 +115,9 @@ st.markdown("""
         border-radius: 8px;
         margin: 10px 0;
     }
-    
     /* Chat Input */
+ 
+    
     .stChatInput textarea {
         background: #1a1a1a !important;
         color: #FFFFFF !important;
@@ -127,6 +128,11 @@ st.markdown("""
     .stChatInput textarea:focus {
         border-color: #FFED4E !important;
         box-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
+    }
+    
+    /* Hide chat input on non-chat pages */
+    [data-testid="stChatInput"] {
+        display: block;
     }
     
     /* Tabs */
@@ -245,10 +251,6 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# ============================================================================
-# FUNÇÕES AUXILIARES
-# ============================================================================
-
 @st.cache_data(ttl=300)
 def carregar_analise(caminho="analise_topicos.json"):
     """Carrega análise com validação"""
@@ -290,9 +292,6 @@ def gerar_wordcloud(texto_dict, max_words=50):
     
     return wc
 
-# ============================================================================
-# NAVEGAÇÃO
-# ============================================================================
 
 if "page" not in st.session_state:
     st.session_state.page = "chat"
@@ -318,34 +317,36 @@ with st.sidebar:
 
 if st.session_state.page == "chat":
     st.title("💬 Chat com o Renan Clone")
+    chat_container = st.container()
     
-    if "messages" not in st.session_state:
-        st.session_state.messages = []
+    with chat_container:
+        if "messages" not in st.session_state:
+            st.session_state.messages = []
 
-    for message in st.session_state.messages:
-        role = "user" if isinstance(message, HumanMessage) else "assistant"
-        with st.chat_message(role):
-            st.markdown(message.content)
+        for message in st.session_state.messages:
+            role = "user" if isinstance(message, HumanMessage) else "assistant"
+            with st.chat_message(role):
+                st.markdown(message.content)
 
-    if prompt := st.chat_input("Converse com o RenanAI"):
-        st.session_state.messages.append(HumanMessage(content=prompt))
-        with st.chat_message("user"):
-            st.markdown(prompt)
+        if prompt := st.chat_input("Converse com o RenanAI"):
+            st.session_state.messages.append(HumanMessage(content=prompt))
+            with st.chat_message("user"):
+                st.markdown(prompt)
 
-        with st.chat_message("assistant"):
-            placeholder = st.empty()
-            full_response = ""
-            inputs = {"messages": st.session_state.messages}
-            
-            for chunk in agent.stream(inputs):
-                for node, values in chunk.items():
-                    if node == "chatbot":
-                        msg = values["messages"][-1]
-                        if hasattr(msg, 'content') and msg.content:
-                            full_response = msg.content if isinstance(msg.content, str) else msg.content[0].get('text', '')
-                            placeholder.markdown(full_response)
-            
-            st.session_state.messages.append(AIMessage(content=full_response))
+            with st.chat_message("assistant"):
+                placeholder = st.empty()
+                full_response = ""
+                inputs = {"messages": st.session_state.messages}
+                
+                for chunk in agent.stream(inputs):
+                    for node, values in chunk.items():
+                        if node == "chatbot":
+                            msg = values["messages"][-1]
+                            if hasattr(msg, 'content') and msg.content:
+                                full_response = msg.content if isinstance(msg.content, str) else msg.content[0].get('text', '')
+                                placeholder.markdown(full_response)
+                
+                st.session_state.messages.append(AIMessage(content=full_response))
 
 # ============================================================================
 # PÁGINA: ANÁLISE
@@ -360,7 +361,6 @@ elif st.session_state.page == "analise":
         st.info("Execute: `python analyzer_backend.py`")
         st.stop()
     
-    # HEADER COM MÉTRICAS
     st.title("📊 Dashboard de Análise de Tópicos")
     
     col1, col2, col3, col4 = st.columns(4)
@@ -378,8 +378,7 @@ elif st.session_state.page == "analise":
     
     st.markdown("---")
     
-    # TABS PRINCIPAIS
-    tabs = ["📈 Ranking", "🕸️ Rede", "🧠 Semântica", "📄 Por Live"]
+    tabs = ["📈 Ranking", "🕸️ Rede"]
     
     if dados['metadados'].get('tem_dados_temporais'):
         tabs.append("📅 Timeline")
@@ -398,7 +397,6 @@ elif st.session_state.page == "analise":
         ranking_data = dados['temas']['ranking'][:top_n]
         df_ranking = pd.DataFrame(ranking_data, columns=['Tema', 'Menções'])
         
-        # Chart with dark theme and yellow colors
         fig = px.bar(
             df_ranking,
             x='Menções',
@@ -438,43 +436,69 @@ elif st.session_state.page == "analise":
     # TAB 2: REDE
     # ========================================================================
     
-    with tab_refs[1]:
-        st.subheader("🕸️ Grafo de Co-ocorrências")
-        
-        col_ctrl1, col_ctrl2, col_ctrl3 = st.columns(3)
-        
-        with col_ctrl1:
-            min_freq = st.slider("Frequência mínima", 1, 20, 5)
-        with col_ctrl2:
-            min_weight = st.slider("Peso mínimo", 1, 10, 3)
-        with col_ctrl3:
-            mostrar_comunidades = st.checkbox("Colorir por comunidade", value=True)
-        
-        G = json_graph.node_link_graph(dados['grafo'])
-        
-        nos_validos = [
-            n for n, data in G.nodes(data=True)
-            if data.get('frequencia', 0) >= min_freq
-        ]
-        G_filtrado = G.subgraph(nos_validos).copy()
-        
-        arestas_remover = [
-            (u, v) for u, v, data in G_filtrado.edges(data=True)
-            if data.get('weight', 0) < min_weight
-        ]
-        G_filtrado.remove_edges_from(arestas_remover)
-        G_filtrado.remove_nodes_from(list(nx.isolates(G_filtrado)))
-        
-        if G_filtrado.number_of_nodes() == 0:
-            st.warning("⚠️ Ajuste os filtros")
-        else:
+        with tab_refs[1]:
+            st.subheader("🕸️ Grafo de Co-ocorrências")
+            
+            st.info("""
+            **💡 Dicas de uso:**
+            - **Frequência mínima**: Mostra apenas temas com N+ menções
+            - **Peso mínimo**: Mostra apenas conexões com N+ co-ocorrências
+            - **Máx. nós**: Limita quantidade de nós (melhor performance)
+            - Para grafos grandes, aumente os filtros para melhor visualização
+            """)
+            
+            # Performance warning
+            G_original = json_graph.node_link_graph(dados['grafo'])
+            total_nodes = G_original.number_of_nodes()
+            
+            col_ctrl1, col_ctrl2, col_ctrl3, col_ctrl4 = st.columns(4)
+            
+            with col_ctrl1:
+                min_freq = st.slider("Frequência mínima", 1, 50, 10)
+            with col_ctrl2:
+                min_weight = st.slider("Peso mínimo", 1, 15, 5)
+            with col_ctrl3:
+                max_nodes = st.slider("Máx. nós", 10, 100, 50, 5)
+            with col_ctrl4:
+                mostrar_comunidades = st.checkbox("Colorir por comunidade", value=True)
+            
+
+            with st.spinner("🔄 Processando grafo..."):
+                G = json_graph.node_link_graph(dados['grafo'])
+                
+                node_freq = [(n, data.get('frequencia', 0)) for n, data in G.nodes(data=True)]
+                node_freq_sorted = sorted(node_freq, key=lambda x: x[1], reverse=True)
+                top_nodes = [n for n, _ in node_freq_sorted[:max_nodes]]
+                
+                nos_validos = [
+                    n for n in top_nodes
+                    if G.nodes[n].get('frequencia', 0) >= min_freq
+                ]
+                
+                if len(nos_validos) == 0:
+                    st.error("❌ Nenhum nó atende aos critérios. Reduza os filtros.")
+                    st.stop()
+                
+                G_filtrado = G.subgraph(nos_validos).copy()
+                
+                arestas_remover = [
+                    (u, v) for u, v, data in G_filtrado.edges(data=True)
+                    if data.get('weight', 0) < min_weight
+                ]
+                G_filtrado.remove_edges_from(arestas_remover)
+                G_filtrado.remove_nodes_from(list(nx.isolates(G_filtrado)))
+            
+            if G_filtrado.number_of_nodes() == 0:
+                st.warning("⚠️ Nenhum nó conectado. Ajuste os filtros.")
+                st.stop()
+            
             col_m1, col_m2, col_m3, col_m4 = st.columns(4)
             
             densidade = nx.density(G_filtrado)
             componentes = nx.number_connected_components(G_filtrado)
             
             with col_m1:
-                st.metric("Nós", G_filtrado.number_of_nodes())
+                st.metric("Nós", f"{G_filtrado.number_of_nodes()}/{total_nodes}")
             with col_m2:
                 st.metric("Arestas", G_filtrado.number_of_edges())
             with col_m3:
@@ -482,9 +506,15 @@ elif st.session_state.page == "analise":
             with col_m4:
                 st.metric("Componentes", componentes)
             
-            pos = nx.spring_layout(G_filtrado, k=1, iterations=50)
-            centralidade = nx.degree_centrality(G_filtrado)
+            with st.spinner("🎨 Gerando layout..."):
+                if G_filtrado.number_of_nodes() > 30:
+                    pos = nx.spring_layout(G_filtrado, k=2, iterations=30, seed=32)
+                else:
+                    pos = nx.spring_layout(G_filtrado, k=1.5, iterations=50, seed=32)
+                
+                centralidade = nx.degree_centrality(G_filtrado)
             
+            # Color nodes by community or default
             if mostrar_comunidades and 'comunidades' in dados:
                 comunidades_map = dados['comunidades'].get('mapeamento', {})
                 cores = {}
@@ -496,68 +526,71 @@ elif st.session_state.page == "analise":
             else:
                 cores = {no: '#FFD700' for no in G_filtrado.nodes()}
             
-            edge_trace = []
-            for edge in G_filtrado.edges(data=True):
-                x0, y0 = pos[edge[0]]
-                x1, y1 = pos[edge[1]]
+            with st.spinner("📊 Renderizando visualização..."):
+                edge_x, edge_y = [], []
                 
-                edge_trace.append(
-                    go.Scatter(
-                        x=[x0, x1, None],
-                        y=[y0, y1, None],
-                        mode='lines',
-                        line=dict(width=0.5, color='rgba(255,215,0,0.3)'),
-                        hoverinfo='none',
-                        showlegend=False
-                    )
+                for edge in G_filtrado.edges():
+                    x0, y0 = pos[edge[0]]
+                    x1, y1 = pos[edge[1]]
+                    edge_x.extend([x0, x1, None])
+                    edge_y.extend([y0, y1, None])
+                
+                edge_trace = go.Scatter(
+                    x=edge_x,
+                    y=edge_y,
+                    mode='lines',
+                    line=dict(width=0.5, color='rgba(255,215,0,0.2)'),
+                    hoverinfo='none',
+                    showlegend=False
                 )
-            
-            node_x, node_y, node_text, node_size, node_color = [], [], [], [], []
-            
-            for node in G_filtrado.nodes():
-                x, y = pos[node]
-                node_x.append(x)
-                node_y.append(y)
                 
-                freq = G_filtrado.nodes[node].get('frequencia', 1)
-                cent = centralidade[node]
+                node_x, node_y, node_text, node_size, node_color = [], [], [], [], []
                 
-                node_text.append(f"{node}<br>Menções: {freq}<br>Centralidade: {cent:.3f}")
-                node_size.append(10 + np.log(freq) * 3)
-                node_color.append(cores[node])
-            
-            node_trace = go.Scatter(
-                x=node_x,
-                y=node_y,
-                mode='markers+text',
-                text=[n for n in G_filtrado.nodes()],
-                textposition="top center",
-                textfont=dict(size=9, color='#FFFFFF'),
-                hovertext=node_text,
-                hoverinfo='text',
-                marker=dict(
-                    size=node_size,
-                    color=node_color,
-                    line=dict(width=2, color='#000000')
-                ),
-                showlegend=False
-            )
-            
-            fig_graph = go.Figure(data=edge_trace + [node_trace])
-            
-            fig_graph.update_layout(
-                title="Rede de Tópicos",
-                showlegend=False,
-                height=700,
-                plot_bgcolor='rgba(0,0,0,0)',
-                paper_bgcolor='rgba(0,0,0,0)',
-                font=dict(color='#FFFFFF'),
-                title_font=dict(color='#FFD700', size=20),
-                xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
-                yaxis=dict(showgrid=False, zeroline=False, showticklabels=False)
-            )
-            
-            st.plotly_chart(fig_graph, use_container_width=True)
+                for node in G_filtrado.nodes():
+                    x, y = pos[node]
+                    node_x.append(x)
+                    node_y.append(y)
+                    
+                    freq = G_filtrado.nodes[node].get('frequencia', 1)
+                    cent = centralidade[node]
+                    
+                    node_text.append(f"{node}<br>Menções: {freq}<br>Centralidade: {cent:.3f}")
+                    node_size.append(10 + np.log1p(freq) * 3)
+                    node_color.append(cores[node])
+                
+                node_trace = go.Scatter(
+                    x=node_x,
+                    y=node_y,
+                    mode='markers+text',
+                    text=[n[:20] + '...' if len(n) > 20 else n for n in G_filtrado.nodes()],
+                    textposition="top center",
+                    textfont=dict(size=8, color='#FFFFFF'),
+                    hovertext=node_text,
+                    hoverinfo='text',
+                    marker=dict(
+                        size=node_size,
+                        color=node_color,
+                        line=dict(width=1.5, color='#000000')
+                    ),
+                    showlegend=False
+                )
+                
+                fig_graph = go.Figure(data=[edge_trace, node_trace])
+                
+                fig_graph.update_layout(
+                    title="Rede de Tópicos",
+                    showlegend=False,
+                    height=600,
+                    plot_bgcolor='rgba(0,0,0,0)',
+                    paper_bgcolor='rgba(0,0,0,0)',
+                    font=dict(color='#FFFFFF'),
+                    title_font=dict(color='#FFD700', size=20),
+                    xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+                    yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+                    hovermode='closest'
+                )
+                
+                st.plotly_chart(fig_graph, use_container_width=True)
             
             if 'comunidades' in dados and dados['comunidades']['total'] > 0:
                 st.markdown("---")
@@ -575,63 +608,3 @@ elif st.session_state.page == "analise":
                 for com_id, membros in sorted(comunidades_dict.items()):
                     with st.expander(f"🔸 Comunidade {com_id + 1} ({len(membros)} temas)"):
                         st.write(", ".join(sorted(membros)))
-    
-    # ========================================================================
-    # TAB 3: ANÁLISE SEMÂNTICA
-    # ========================================================================
-    
-    with tab_refs[2]:
-        st.subheader("🧠 Mapa de Similaridade Semântica")
-        
-        if 'analise_semantica' in dados and dados['analise_semantica']['matriz_similaridade']:
-            matriz = np.array(dados['analise_semantica']['matriz_similaridade'])
-            temas_ordem = dados['analise_semantica']['temas_ordem']
-            
-            if len(temas_ordem) > 20:
-                st.info(f"📊 Mostrando top 20 de {len(temas_ordem)} temas")
-                temas_ordem = temas_ordem[:20]
-                matriz = matriz[:20, :20]
-            
-            fig_heat = go.Figure(data=go.Heatmap(
-                z=matriz,
-                x=temas_ordem,
-                y=temas_ordem,
-                colorscale=['#000000', '#FFD700', '#FFED4E'],
-                text=np.round(matriz, 2),
-                texttemplate='%{text}',
-                textfont={"size": 8, "color": "#000000"},
-                colorbar=dict(title="Similaridade", titlefont=dict(color='#FFFFFF'), tickfont=dict(color='#FFFFFF'))
-            ))
-            
-            fig_heat.update_layout(
-                title="Mapa de Calor - Similaridade entre Temas",
-                height=700,
-                xaxis_tickangle=-45,
-                plot_bgcolor='rgba(0,0,0,0)',
-                paper_bgcolor='rgba(0,0,0,0)',
-                font=dict(color='#FFFFFF'),
-                title_font=dict(color='#FFD700', size=20)
-            )
-            
-            st.plotly_chart(fig_heat, use_container_width=True)
-            
-            st.markdown("---")
-            st.subheader("🔗 Temas Mais Relacionados Semanticamente")
-            
-            pares_similares = []
-            for i in range(len(temas_ordem)):
-                for j in range(i+1, len(temas_ordem)):
-                    if matriz[i][j] > 0.5:
-                        pares_similares.append({
-                            'Tema 1': temas_ordem[i],
-                            'Tema 2': temas_ordem[j],
-                            'Similaridade': round(matriz[i][j], 3)
-                        })
-            
-            if pares_similares:
-                df_pares = pd.DataFrame(pares_similares).sort_values('Similaridade', ascending=False)
-                st.dataframe(df_pares.head(15), use_container_width=True, hide_index=True)
-            else:
-                st.info("Nenhum par com similaridade > 0.5")
-        else:
-            st.warning("⚠️ Dados de similaridade não disponíveis")
