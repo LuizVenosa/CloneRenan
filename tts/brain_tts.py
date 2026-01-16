@@ -20,11 +20,11 @@ embeddings = HuggingFaceEmbeddings(
     model_name="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
     encode_kwargs={"normalize_embeddings": True}
 )
-DB_PATH = "./db_clone"
+DB_PATH = "../db_clone"
 
 # Carregar Master Prompt
-if os.path.exists("prompt_clone.txt"):
-    with open("prompt_clone.txt", "r", encoding="utf-8") as f:
+if os.path.exists("prompt_clone_tts.txt"):
+    with open("prompt_clone_tts.txt", "r", encoding="utf-8") as f:
         master_prompt = f.read()
 else:
     master_prompt = "Você é um assistente."
@@ -36,7 +36,7 @@ else:
 vector_db = Chroma(persist_directory=DB_PATH, embedding_function=embeddings)
 retriever = vector_db.as_retriever(
     search_type="mmr",
-    search_kwargs={"k": 8, "fetch_k": 60, "lambda_mult": 0.4}
+    search_kwargs={"k": 4, "fetch_k": 60, "lambda_mult": 0.3}
 )
 
 @tool
