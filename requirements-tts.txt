@@ -1,0 +1,9 @@
+edge-tts>=6.1.12
+sounddevice>=0.4.6
+soundfile>=0.12.1
+qwen-tts
+torch
+realtimetts
+twitchio
+websockets>=12.0
+obsws-python>=1.7.0

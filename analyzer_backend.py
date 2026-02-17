@@ -456,8 +456,7 @@ def analisar_lives(pasta_srt: str = "./captions",
         "comunidades": {  # NOVO
             "mapeamento": comunidades,
             "total": len(set(comunidades.values()))
-        },
-        "analise_documentos": analise_docs  # NOVO
+        }   # NOVO
     }
     
     # Salva
